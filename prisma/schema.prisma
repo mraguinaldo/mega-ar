@@ -1,0 +1,152 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL") 
+}
+
+model Usuario {
+  id               String   @id @default(uuid())
+  nomeCompleto     String
+  email            String   @unique
+  senhaHash        String
+  papel            Papel    @default(CLIENTE)
+  activo           Boolean  @default(true)
+  criadoEm         DateTime @default(now())
+  atualizadoEm     DateTime @updatedAt
+
+  contacto         String   @unique
+  endereco         String?
+
+  cliente          Cliente?
+  fornecedor       Fornecedor?
+}
+
+enum Papel {
+  CLIENTE
+  FUNCIONARIO
+  ADMIN
+}
+
+model Cliente {
+  id                 String   @id @default(uuid())
+  usuarioId          String   @unique
+  identificacao      String
+  temCreditoEspecial Boolean  @default(false)
+
+  usuario            Usuario  @relation(fields: [usuarioId], references: [id])
+
+  oficios            Oficio[]
+  notasAquisicao     NotaAquisicao[]
+  pagamentos         Pagamento[]
+}
+
+model Oficio {
+  id               String   @id @default(uuid())
+  descricao        String
+  dataEnvio        DateTime @default(now())
+  tipoEquipamento  String
+  
+  clienteId        String
+  cliente          Cliente @relation(fields: [clienteId], references: [id])
+}
+
+model Catalogo {
+  id               String   @id @default(uuid())
+  equipamento      String
+  descricao        String
+  preco            Float
+  disponibilidade  Boolean @default(true)
+}
+
+model Stock {
+  id           String @id @default(uuid())
+  equipamento  String
+  quantidade   Int
+}
+
+
+model Fornecedor {
+  id         String  @id @default(uuid())
+  usuarioId  String  @unique
+
+  usuario    Usuario @relation(fields: [usuarioId], references: [id])
+
+  encomendas Encomenda[]
+}
+
+
+model StockMovimento {
+  id                 String   @id @default(uuid())
+  notaAquisicaoId    String
+  dataMovimento      DateTime @default(now())
+  quantidadeRetirada Int
+
+  notaAquisicao      NotaAquisicao @relation(fields: [notaAquisicaoId], references: [id])
+}
+
+model Encomenda {
+  id               String   @id @default(uuid())
+  fornecedorId     String
+  notaAquisicaoId  String
+  dataCriacao      DateTime @default(now())
+  estado           EstadoEncomenda @default(PENDENTE)
+
+  fornecedor       Fornecedor    @relation(fields: [fornecedorId], references: [id])
+  notaAquisicao    NotaAquisicao @relation(fields: [notaAquisicaoId], references: [id])
+}
+
+model Pagamento {
+  id               String   @id @default(uuid())
+  clienteId        String
+  notaAquisicaoId  String
+  dataPagamento    DateTime @default(now())
+  valor            Float
+  tipoPagamento    TipoPagamento
+
+  cliente          Cliente       @relation(fields: [clienteId], references: [id])
+  notaAquisicao    NotaAquisicao @relation(fields: [notaAquisicaoId], references: [id])
+}
+
+model NotaAquisicao {
+  id             String   @id @default(uuid())
+  dataCriacao    DateTime @default(now())
+  clienteId      String
+  equipamento    String
+  quantidade     Int
+  estado         EstadoNota @default(EM_ANALISE)
+
+  cliente        Cliente @relation(fields: [clienteId], references: [id])
+
+  stockMovimentos StockMovimento[]   // CORRIGIDO (1:N)
+  encomendas      Encomenda[]        // CORRIGIDO (1:N)
+  pagamentos      Pagamento[]        // CORRIGIDO (campo inverso)
+}
+
+
+enum TipoPagamento {
+  IMEDIATO
+  PRESTACAO
+}
+
+enum EstadoNota {
+  EM_ANALISE
+  AGUARDANDO_STOCK
+  APROVADA
+  RECUSADA
+}
+
+enum EstadoEncomenda {
+  PENDENTE
+  ENVIADA
+  RECEBIDA
+  CANCELADA
+}
