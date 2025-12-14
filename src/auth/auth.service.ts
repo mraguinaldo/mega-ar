@@ -25,6 +25,11 @@ export class AuthService {
     const usuario = await this.usuarioService.findByEmail(dto.email);
     if (!usuario) throw new UnauthorizedException('Credenciais inválidas');
 
+    if (!usuario.activo)
+      throw new UnauthorizedException(
+        'Conta desativada, entre em contato com o suporte',
+      );
+
     const senhaOk = await bcrypt.compare(dto.senha, usuario.senhaHash);
     if (!senhaOk) throw new UnauthorizedException('Credenciais inválidas');
 

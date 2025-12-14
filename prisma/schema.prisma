@@ -1,33 +1,30 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL") 
+  url      = env("DATABASE_URL")
 }
 
 model Usuario {
-  id               String   @id @default(uuid())
-  nomeCompleto     String
-  email            String   @unique
-  senhaHash        String
-  papel            Papel    @default(CLIENTE)
-  activo           Boolean  @default(true)
-  criadoEm         DateTime @default(now())
-  atualizadoEm     DateTime @updatedAt
+  id                   String    @id @default(uuid())
+  nomeCompleto         String
+  email                String    @unique
+  senhaHash            String
+  contacto             String    @unique
+  endereco             String?
+  papel                Papel     @default(CLIENTE)
+  activo               Boolean   @default(true)
+  identificacao        String?   // cliente
+  temCreditoEspecial   Boolean?  @default(false)
 
-  contacto         String   @unique
-  endereco         String?
-
-  cliente          Cliente?
-  fornecedor       Fornecedor?
+  oficios              Oficio[]
+  notasAquisicao       NotaAquisicao[]
+  pagamentos           Pagamento[]
+  criadoEm             DateTime  @default(now())
+  atualizadoEm         DateTime  @updatedAt
+  StockMovimento       StockMovimento[]
 }
 
 enum Papel {
@@ -36,105 +33,92 @@ enum Papel {
   ADMIN
 }
 
-model Cliente {
-  id                 String   @id @default(uuid())
-  usuarioId          String   @unique
-  identificacao      String
-  temCreditoEspecial Boolean  @default(false)
+model Catalogo {
+  id            String    @id @default(uuid())
+  nome          String
+  marca         String
+  modelo        String
+  descricao     String
+  preco         Float
+  imagens       String[]
+  tipo          TipoEquipamento
+  ativo         Boolean   @default(true)
+  stockAtual   Int       @default(0)
+  movimentos    StockMovimento[]
+  criadoEm      DateTime  @default(now())
+  atualizadoEm  DateTime  @updatedAt
+  NotaAquisicao NotaAquisicao[]
+}
 
-  usuario            Usuario  @relation(fields: [usuarioId], references: [id])
+model StockMovimento {
+  id               String   @id @default(uuid())
+  catalogoId       String
+  catalogo         Catalogo @relation(fields: [catalogoId], references: [id])
+  tipo             TipoMovimento
+  quantidade       Int
+  motivo           String?
+  notaAquisicaoId  String?
+  notaAquisicao    NotaAquisicao? @relation(fields: [notaAquisicaoId], references: [id])
+  criadoPorId      String
+  criadoPor        Usuario  @relation(fields: [criadoPorId], references: [id])
+  dataMovimento    DateTime @default(now())
+}
 
-  oficios            Oficio[]
-  notasAquisicao     NotaAquisicao[]
-  pagamentos         Pagamento[]
+enum TipoMovimento {
+  ENTRADA
+  SAIDA
 }
 
 model Oficio {
-  id               String   @id @default(uuid())
-  descricao        String
-  dataEnvio        DateTime @default(now())
-  tipoEquipamento  String
-  
-  clienteId        String
-  cliente          Cliente @relation(fields: [clienteId], references: [id])
-}
-
-model Catalogo {
-  id               String   @id @default(uuid())
-  equipamento      String
-  descricao        String
-  preco            Float
-  disponibilidade  Boolean @default(true)
-}
-
-model Stock {
-  id           String @id @default(uuid())
-  equipamento  String
-  quantidade   Int
-}
-
-
-model Fornecedor {
-  id         String  @id @default(uuid())
-  usuarioId  String  @unique
-
-  usuario    Usuario @relation(fields: [usuarioId], references: [id])
-
-  encomendas Encomenda[]
-}
-
-
-model StockMovimento {
-  id                 String   @id @default(uuid())
-  notaAquisicaoId    String
-  dataMovimento      DateTime @default(now())
-  quantidadeRetirada Int
-
-  notaAquisicao      NotaAquisicao @relation(fields: [notaAquisicaoId], references: [id])
-}
-
-model Encomenda {
-  id               String   @id @default(uuid())
-  fornecedorId     String
-  notaAquisicaoId  String
-  dataCriacao      DateTime @default(now())
-  estado           EstadoEncomenda @default(PENDENTE)
-
-  fornecedor       Fornecedor    @relation(fields: [fornecedorId], references: [id])
-  notaAquisicao    NotaAquisicao @relation(fields: [notaAquisicaoId], references: [id])
-}
-
-model Pagamento {
-  id               String   @id @default(uuid())
-  clienteId        String
-  notaAquisicaoId  String
-  dataPagamento    DateTime @default(now())
-  valor            Float
-  tipoPagamento    TipoPagamento
-
-  cliente          Cliente       @relation(fields: [clienteId], references: [id])
-  notaAquisicao    NotaAquisicao @relation(fields: [notaAquisicaoId], references: [id])
+  id                String    @id @default(uuid())
+  descricao         String
+  dataEnvio         DateTime  @default(now())
+  tipoEquipamento   TipoEquipamento
+  quantidade        Int
+  localInstalacao   String
+  justificativa     String
+  pdfAnexo          String?
+  clienteId         String
+  cliente           Usuario   @relation(fields: [clienteId], references: [id])
+  notaAquisicao     NotaAquisicao? @relation("OficioToNota")
 }
 
 model NotaAquisicao {
-  id             String   @id @default(uuid())
-  dataCriacao    DateTime @default(now())
-  clienteId      String
-  equipamento    String
-  quantidade     Int
-  estado         EstadoNota @default(EM_ANALISE)
+  id                String    @id @default(uuid())
+  dataCriacao       DateTime  @default(now())
+  catalogoId        String?
+  catalogo          Catalogo? @relation(fields: [catalogoId], references: [id])
+  quantidade        Int
+  estado            EstadoNota @default(EM_ANALISE)
+  clienteId         String
+  cliente           Usuario   @relation(fields: [clienteId], references: [id])
+  oficioId          String?   @unique
+  oficio            Oficio?   @relation("OficioToNota", fields: [oficioId], references: [id])
+  motivoRecusa      String?
 
-  cliente        Cliente @relation(fields: [clienteId], references: [id])
-
-  stockMovimentos StockMovimento[]   // CORRIGIDO (1:N)
-  encomendas      Encomenda[]        // CORRIGIDO (1:N)
-  pagamentos      Pagamento[]        // CORRIGIDO (campo inverso)
+  stockMovimentos   StockMovimento[]
+  pagamentos        Pagamento[]
 }
 
+model Pagamento {
+  id                String    @id @default(uuid())
+  clienteId         String
+  cliente           Usuario   @relation(fields: [clienteId], references: [id])
+  notaAquisicaoId   String
+  notaAquisicao     NotaAquisicao @relation(fields: [notaAquisicaoId], references: [id])
+  dataPagamento     DateTime  @default(now())
+  valor             Float
+  tipoPagamento     TipoPagamento
+}
 
-enum TipoPagamento {
-  IMEDIATO
-  PRESTACAO
+enum TipoEquipamento {
+  SPLIT
+  CASSETE
+  MULTI_SPLIT
+  PORTATIL
+  JANELA
+  INVERTER
+  CENTRAL
 }
 
 enum EstadoNota {
@@ -144,9 +128,7 @@ enum EstadoNota {
   RECUSADA
 }
 
-enum EstadoEncomenda {
-  PENDENTE
-  ENVIADA
-  RECEBIDA
-  CANCELADA
+enum TipoPagamento {
+  IMEDIATO
+  PRESTACAO
 }

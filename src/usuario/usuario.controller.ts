@@ -23,56 +23,55 @@ import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 
 @Controller('usuario')
-@UseGuards(AuthGuard('jwt'))
 export class UsuarioController {
   constructor(private readonly usuarioService: UsuarioService) {}
 
   @Post()
   @UseGuards()
-  create(@Body() createUsuarioDto: CreateUsuarioDto) {
-    return this.usuarioService.create(createUsuarioDto);
+  async create(@Body() createUsuarioDto: CreateUsuarioDto) {
+    return await this.usuarioService.create(createUsuarioDto);
   }
 
+  @UseGuards(AuthGuard('jwt'))
   @Get()
-  @Roles(Papel.ADMIN)
   @UseGuards(RolesGuard)
   findAll() {
     return this.usuarioService.findAll();
   }
 
+  @UseGuards(AuthGuard('jwt'))
   @Get(':id')
   async findOne(@Param('id') id: string, @Req() req: any) {
     const usuarioLogado = req.user;
 
-    if (usuarioLogado.papel !== Papel.ADMIN && usuarioLogado.sub !== id) {
-      throw new UnauthorizedException('Você só pode ver o próprio perfil');
+    if (!usuarioLogado) {
+      throw new UnauthorizedException('Token inválido ou expirado');
     }
 
-    return this.usuarioService.findOne(id);
+    const usuario = await this.usuarioService.findOne(id);
+    if (!usuario) {
+      throw new BadRequestException(`Usuário com ID ${id} não encontrado`);
+    }
+
+    return usuario;
   }
 
   @Patch(':id')
   async update(
     @Param('id') id: string,
     @Body() updateUsuarioDto: UpdateUsuarioDto,
-    @Req() req: any,
   ) {
-    const usuarioLogado = req.user;
-
-    if (usuarioLogado.papel !== Papel.ADMIN && usuarioLogado.sub !== id) {
-      throw new UnauthorizedException('Você só pode editar o próprio perfil');
-    }
-
     return this.usuarioService.update(id, updateUsuarioDto);
   }
 
+  @UseGuards(AuthGuard('jwt'))
   @Delete(':id')
-  @Roles(Papel.ADMIN)
   @UseGuards(RolesGuard)
   remove(@Param('id') id: string) {
     return this.usuarioService.remove(id);
   }
 
+  @UseGuards(AuthGuard('jwt'))
   @Get('papel/:papel')
   @Roles(Papel.ADMIN)
   @UseGuards(RolesGuard)

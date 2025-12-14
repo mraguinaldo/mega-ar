@@ -32,4 +32,7 @@ export class CreateUsuarioDto {
   })
   @IsOptional()
   papel?: Papel;
+
+  @IsOptional()
+  activo?: boolean;
 }

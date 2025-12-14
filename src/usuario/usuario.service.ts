@@ -10,16 +10,20 @@ import { UpdateUsuarioDto } from './dto/update-usuario.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
 import { Papel } from '@prisma/client';
+import { JwtService } from '@nestjs/jwt';
 
 @Injectable()
 export class UsuarioService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private jwtService: JwtService,
+  ) {}
 
   async create(createUsuarioDto: CreateUsuarioDto) {
     const senhaHash = await bcrypt.hash(createUsuarioDto.senha, 10);
 
     try {
-      return await this.prisma.usuario.create({
+      const user = await this.prisma.usuario.create({
         data: {
           nomeCompleto: createUsuarioDto.nomeCompleto,
           email: createUsuarioDto.email.toLowerCase().trim(),
@@ -28,21 +32,37 @@ export class UsuarioService {
           endereco: createUsuarioDto.endereco,
         },
       });
+
+      const payload = {
+        sub: user.id,
+        email: user.email,
+        papel: user.papel,
+      };
+
+      return {
+        usuario: {
+          id: user.id,
+          nomeCompleto: user.nomeCompleto,
+          email: user.email,
+          papel: user.papel,
+        },
+        access_token: this.jwtService.sign(payload),
+      };
     } catch (error: any) {
       if (error.code === 'P2002') {
+        // Identifica qual campo deu conflito
         const field = (error.meta?.target?.[0] as string) || 'desconhecido';
-
         const mensagens: Record<string, string> = {
           email: 'O email já está sendo usado por outro usuário',
           contacto: 'Este número de contacto já está cadastrado',
         };
-
         throw new BadRequestException({
           message: mensagens[field] || `O campo ${field} já está em uso`,
           field,
         });
       }
-      throw error;
+      console.error('Erro ao criar usuário:', error);
+      throw new BadRequestException('Erro ao criar usuário. Tente novamente.');
     }
   }
 
@@ -96,7 +116,7 @@ export class UsuarioService {
     try {
       return await this.prisma.usuario.update({
         where: { id },
-        data,
+        data: data,
         select: {
           id: true,
           nomeCompleto: true,
