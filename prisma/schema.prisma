@@ -8,23 +8,24 @@ datasource db {
 }
 
 model Usuario {
-  id                   String    @id @default(uuid())
-  nomeCompleto         String
-  email                String    @unique
-  senhaHash            String
-  contacto             String    @unique
-  endereco             String?
-  papel                Papel     @default(CLIENTE)
-  activo               Boolean   @default(true)
-  identificacao        String?   // cliente
-  temCreditoEspecial   Boolean?  @default(false)
+  id                 String   @id @default(uuid())
+  nomeCompleto       String
+  email              String   @unique
+  senhaHash          String
+  contacto           String   @unique
+  endereco           String?
+  papel              Papel    @default(CLIENTE)
+  activo             Boolean  @default(true)
+  identificacao      String? // cliente
+  temCreditoEspecial Boolean? @default(false)
+  creditoAcumulado     Float     @default(0)
 
-  oficios              Oficio[]
-  notasAquisicao       NotaAquisicao[]
-  pagamentos           Pagamento[]
-  criadoEm             DateTime  @default(now())
-  atualizadoEm         DateTime  @updatedAt
-  StockMovimento       StockMovimento[]
+  oficios        Oficio[]
+  notasAquisicao NotaAquisicao[]
+  pagamentos     Pagamento[]
+  criadoEm       DateTime         @default(now())
+  atualizadoEm   DateTime         @updatedAt
+  StockMovimento StockMovimento[]
 }
 
 enum Papel {
@@ -34,7 +35,7 @@ enum Papel {
 }
 
 model Catalogo {
-  id            String    @id @default(uuid())
+  id            String           @id @default(uuid())
   nome          String
   marca         String
   modelo        String
@@ -42,26 +43,27 @@ model Catalogo {
   preco         Float
   imagens       String[]
   tipo          TipoEquipamento
-  ativo         Boolean   @default(true)
-  stockAtual   Int       @default(0)
+  ativo         Boolean          @default(true)
+  stockAtual    Int              @default(0)
   movimentos    StockMovimento[]
-  criadoEm      DateTime  @default(now())
-  atualizadoEm  DateTime  @updatedAt
+  criadoEm      DateTime         @default(now())
+  atualizadoEm  DateTime         @updatedAt
   NotaAquisicao NotaAquisicao[]
+  pagamentos    Pagamento[]
 }
 
 model StockMovimento {
-  id               String   @id @default(uuid())
-  catalogoId       String
-  catalogo         Catalogo @relation(fields: [catalogoId], references: [id])
-  tipo             TipoMovimento
-  quantidade       Int
-  motivo           String?
-  notaAquisicaoId  String?
-  notaAquisicao    NotaAquisicao? @relation(fields: [notaAquisicaoId], references: [id])
-  criadoPorId      String
-  criadoPor        Usuario  @relation(fields: [criadoPorId], references: [id])
-  dataMovimento    DateTime @default(now())
+  id              String         @id @default(uuid())
+  catalogoId      String
+  catalogo        Catalogo       @relation(fields: [catalogoId], references: [id])
+  tipo            TipoMovimento
+  quantidade      Int
+  motivo          String?
+  notaAquisicaoId String?
+  notaAquisicao   NotaAquisicao? @relation(fields: [notaAquisicaoId], references: [id])
+  criadoPorId     String
+  criadoPor       Usuario        @relation(fields: [criadoPorId], references: [id])
+  dataMovimento   DateTime       @default(now())
 }
 
 enum TipoMovimento {
@@ -70,45 +72,48 @@ enum TipoMovimento {
 }
 
 model Oficio {
-  id                String    @id @default(uuid())
-  descricao         String
-  dataEnvio         DateTime  @default(now())
-  tipoEquipamento   TipoEquipamento
-  quantidade        Int
-  localInstalacao   String
-  justificativa     String
-  pdfAnexo          String?
-  clienteId         String
-  cliente           Usuario   @relation(fields: [clienteId], references: [id])
-  notaAquisicao     NotaAquisicao? @relation("OficioToNota")
+  id              String          @id @default(uuid())
+  descricao       String
+  dataEnvio       DateTime        @default(now())
+  tipoEquipamento TipoEquipamento
+  quantidade      Int
+  localInstalacao String
+  justificativa   String
+  pdfAnexo        String?
+  clienteId       String
+  cliente         Usuario         @relation(fields: [clienteId], references: [id])
+  notaAquisicao   NotaAquisicao?  @relation("OficioToNota")
 }
 
 model NotaAquisicao {
-  id                String    @id @default(uuid())
-  dataCriacao       DateTime  @default(now())
-  catalogoId        String?
-  catalogo          Catalogo? @relation(fields: [catalogoId], references: [id])
-  quantidade        Int
-  estado            EstadoNota @default(EM_ANALISE)
-  clienteId         String
-  cliente           Usuario   @relation(fields: [clienteId], references: [id])
-  oficioId          String?   @unique
-  oficio            Oficio?   @relation("OficioToNota", fields: [oficioId], references: [id])
-  motivoRecusa      String?
+  id           String     @id @default(uuid())
+  dataCriacao  DateTime   @default(now())
+  catalogoId   String?
+  catalogo     Catalogo?  @relation(fields: [catalogoId], references: [id])
+  quantidade   Int
+  estado       EstadoNota @default(EM_ANALISE)
+  clienteId    String
+  cliente      Usuario    @relation(fields: [clienteId], references: [id])
+  oficioId     String?    @unique
+  oficio       Oficio?    @relation("OficioToNota", fields: [oficioId], references: [id])
+  motivoRecusa String?
+  valorEmFalta      Float?
 
-  stockMovimentos   StockMovimento[]
-  pagamentos        Pagamento[]
+  stockMovimentos StockMovimento[]
+  pagamentos      Pagamento[]
 }
 
 model Pagamento {
-  id                String    @id @default(uuid())
-  clienteId         String
-  cliente           Usuario   @relation(fields: [clienteId], references: [id])
-  notaAquisicaoId   String
-  notaAquisicao     NotaAquisicao @relation(fields: [notaAquisicaoId], references: [id])
-  dataPagamento     DateTime  @default(now())
-  valor             Float
-  tipoPagamento     TipoPagamento
+  id              String        @id @default(uuid())
+  clienteId       String
+  cliente         Usuario       @relation(fields: [clienteId], references: [id])
+  notaAquisicaoId String
+  notaAquisicao   NotaAquisicao @relation(fields: [notaAquisicaoId], references: [id])
+  catalogoId      String?
+  catalogo        Catalogo?     @relation(fields: [catalogoId], references: [id], map: "PagamentoToCatalogo")
+  dataPagamento   DateTime      @default(now())
+  valor           Float
+  tipoPagamento   TipoPagamento
 }
 
 enum TipoEquipamento {
@@ -126,6 +131,8 @@ enum EstadoNota {
   AGUARDANDO_STOCK
   APROVADA
   RECUSADA
+  PAGAMENTO_PENDENTE
+  CONCLUIDA
 }
 
 enum TipoPagamento {

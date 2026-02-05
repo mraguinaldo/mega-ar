@@ -84,6 +84,7 @@ export class OficiosService {
             papel: true,
             temCreditoEspecial: true,
             StockMovimento: true,
+            creditoAcumulado: true,
           },
         },
         notaAquisicao: true,
